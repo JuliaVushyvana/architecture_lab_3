@@ -109,3 +109,47 @@
 **Trade-off:** кожен caller мусить сам отримати pricing rules; Checkout залежить від `config.ts`.
 
 **Verification:** `tests/calculateTotal.test.ts` (frozen lines, зміна globals, порожній audit), стартовий тест `total: 240`.
+
+## Decision 7: Другий provider як локальний adapter, вибір у composition root
+
+**Problem:** потрібен другий provider без змін consumers публічного Payments API.
+
+**Evidence:** change request; до рівня 75 Stripe був вбудований у `src/orders/OrderService.ts:4,10`.
+
+**Decision:** `SandboxPayAdapter` у `payments/internal/sandboxpay/` з власними `SandboxPayRequest`, `amountText`, станами `APPROVED/PENDING_REVIEW/REJECTED` і своєю таблицею статусів. Вибір — `createPaymentGateway(provider)` або `PAYMENT_PROVIDER`; невідома назва кидає помилку при старті.
+
+**Why:** consumers отримують лише `PaymentGateway`; у `src/` змінився тільки `src/payments/**`.
+
+**Alternative:** вибір provider на кожен запит через поле в `CheckoutRequest`.
+
+**Why rejected:** змінює публічний Checkout API і пускає назви providers у Checkout.
+
+**Trade-off:** один provider на процес; маршрутизація за валютою потребуватиме нового рішення.
+
+**Verification:** `tests/paymentProviders.test.ts` — paid/processing/failed для обох adapters.
+
+## Decision 8: Architecture fitness functions по графу imports
+
+**Problem:** усі стартові порушення проходили `npm test`; після рефакторингу вони могли повернутися непомітно.
+
+**Evidence:** `package.json:9-13` (стартовий код), коментарі `Deliberate ...` у коді.
+
+**Decision:** `scripts/check-architecture.ts` будує граф локальних imports усього `src/`, ігноруючи коментарі. Правила: чужий `internal/`, доступ Orders/Checkout до `database.stock` (включно з alias), цикли на рівні файлів і модулів (Tarjan). Повідомлення містить `file:line`.
+
+**Why:** перевіряє структуру дерева, а не конкретний відомий рядок.
+
+**Alternative:** dependency-cruiser або ESLint `import/no-cycle`.
+
+**Why rejected:** стартовий проєкт не має залежностей; правило про storage все одно потребує власної логіки.
+
+**Trade-off:** regex-парсер може пропустити екзотичний синтаксис.
+
+**Verification:** `tests/architecture.test.ts` на fixture-деревах; ручне внесення порушень дало exit code 1.
+
+## AI review
+
+**Корисна пропозиція:** AI запропонував агрегувати кількості одного товару в `Inventory.reserve` перед перевіркою. Без цього два рядки `book × 3` при залишку 5 проходили б перевірку окремо й робили залишок від'ємним. Додано тест `repeated lines of one product are reserved together`.
+
+**Відхилена пропозиція:** AI пропонував абстрактний `PaymentProviderRegistry` з plugin-реєстрацією, event bus для статусів і окремий `Money` value object. Відхилено як overengineering: для двох локальних adapters достатньо об'єкта `PROVIDERS` у `payments/index.ts`; event bus доречний лише при асинхронному підтвердженні (див. ADR-001, тригери).
+
+**Як перевірено згенероване рішення:** стартовий `tests/checkout.functional.test.ts` не змінювався й проходить; contract-тести фіксують точну форму відповіді Checkout для paid/processing/failed; `npm run check:architecture` прогнано з навмисно внесеними порушеннями (import `internal`, `db.stock.set` через alias, цикл Orders ↔ Payments) — усі виявлено з exit code 1; `git diff` рівня 90 показав, що в `src/` змінено лише `src/payments/**`.

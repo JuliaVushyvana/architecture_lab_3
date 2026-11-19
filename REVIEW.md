@@ -61,4 +61,14 @@
 
 ### Після рівня 90 (другий provider)
 
-_Буде заповнено після реалізації другого provider._
+**Actual files changed:**
+
+- `src/payments/index.ts` — реєстр `PROVIDERS` і вибір provider (`createPaymentGateway(provider)`, `PAYMENT_PROVIDER`).
+- `src/payments/internal/sandboxpay/SandboxPayClient.ts`, `src/payments/internal/sandboxpay/SandboxPayAdapter.ts` — нові.
+- Поза `src/`: `scripts/check-architecture.ts`, `package.json` (`check:architecture`), `tests/paymentProviders.test.ts`, `tests/architecture.test.ts`, документація.
+- **Не змінено:** Checkout, Orders, Inventory, Reports, Notifications, shared, `database.ts`, `contract.ts`, Stripe adapter.
+
+**Difference from prediction and explanation:**
+
+Прогноз «після рефакторингу другий provider торкається лише `src/payments/**`» справдився повністю (`git diff --stat` коміту рівня 90 по `src/`). Це наслідок рівня 75: контракт `PaymentGateway` і нормалізація вже були provider-neutral, тож adapter лише реалізує існуючий інтерфейс. Не прогнозувалось, що навіть `contract.ts` і `normalizeStatus.ts` не зміняться — політика fail closed виявилась спільною для обох providers.
+
