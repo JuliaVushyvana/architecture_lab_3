@@ -1,6 +1,6 @@
-import { calculateTotal, type CartLine } from "../shared/calculateTotal.ts";
-import { OrderService } from "../orders/OrderService.ts";
-import type { StripePayload } from "../payments/internal/StripeClient.ts";
+import { calculateTotal, type CartLine, type PricingRules } from "../shared/calculateTotal.ts";
+import { OrderService } from "../orders/index.ts";
+import { auditLog, runtimeConfig } from "../config.ts";
 
 export type CheckoutRequest = {
   orderId: string;
@@ -9,30 +9,33 @@ export type CheckoutRequest = {
   lines: CartLine[];
 };
 
+export type CheckoutResponse = {
+  orderId: string;
+  status: string;
+  total: number;
+  paymentStatus: string | undefined;
+};
+
 export class CheckoutController {
   private readonly orders: OrderService;
+  private readonly pricing: () => PricingRules;
 
-  constructor(orders = new OrderService()) {
+  constructor(orders = new OrderService(), pricing: () => PricingRules = currentPricing) {
     this.orders = orders;
+    this.pricing = pricing;
   }
 
-  async checkout(request: CheckoutRequest) {
-    const total = calculateTotal(request.lines);
+  async checkout(request: CheckoutRequest): Promise<CheckoutResponse> {
+    const total = calculateTotal(request.lines, this.pricing());
+    auditLog.push(`total_calculated:${total}`);
 
-    // Deliberate leak: transport/controller code knows Stripe's payload shape.
-    const stripePayload: StripePayload = {
-      id: request.paymentToken,
-      amount: Math.round(total * 100),
-      currency: request.currency,
-      metadata: { orderId: request.orderId },
-    };
-
-    const order = await this.orders.placeOrder(
-      request.orderId,
-      request.lines,
+    const order = await this.orders.placeOrder({
+      orderId: request.orderId,
+      lines: request.lines,
       total,
-      stripePayload,
-    );
+      currency: request.currency,
+      paymentToken: request.paymentToken,
+    });
 
     return {
       orderId: order.id,
@@ -41,4 +44,8 @@ export class CheckoutController {
       paymentStatus: order.paymentStatus,
     };
   }
+}
+
+function currentPricing(): PricingRules {
+  return { taxRate: runtimeConfig.taxRate, discountPercent: runtimeConfig.discountPercent };
 }

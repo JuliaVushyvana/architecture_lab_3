@@ -1,8 +1,9 @@
 import { CheckoutController } from "./checkout/CheckoutController.ts";
-import { database, resetDatabase } from "./database.ts";
+import { resetDatabase } from "./database.ts";
+import { Inventory } from "./inventory/index.ts";
 
 resetDatabase();
-database.stock.set("book", { productId: "book", available: 5 });
+new Inventory().restock("book", 5);
 
 const result = await new CheckoutController().checkout({
   orderId: "order-demo",

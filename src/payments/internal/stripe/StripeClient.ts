@@ -1,7 +1,4 @@
-// Deliberate boundary violation: Payments reaches into Orders internals.
-import { markOrderPaid } from "../../orders/internal/orderMutations.ts";
-import { normalizeStripeStatus } from "../paymentStatus.ts";
-
+// Local simulation of the Stripe API. Token prefixes make the outcome deterministic.
 export type StripePayload = {
   id: string;
   amount: number;
@@ -21,8 +18,6 @@ export class StripeClient {
       : payload.id.startsWith("pending_")
         ? "requires_action"
         : "succeeded";
-    const response: StripeResponse = { charge_id: `ch_${payload.id}`, state };
-    markOrderPaid(payload.metadata.orderId, normalizeStripeStatus(state));
-    return response;
+    return { charge_id: `ch_${payload.id}`, state };
   }
 }

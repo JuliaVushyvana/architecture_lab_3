@@ -37,10 +37,28 @@
 
 ## Actual impact (заповнити після реалізації)
 
+### Після рівнів 60 + 75 (`processing` + межі модулів)
+
 **Actual files changed:**
 
-_Буде заповнено після реалізації._
+- Payments: `src/payments/contract.ts`, `src/payments/index.ts` (нові, публічні); `src/payments/internal/normalizeStatus.ts`, `src/payments/internal/stripe/StripeAdapter.ts`, `src/payments/internal/stripe/StripeClient.ts` (перенесено з `internal/StripeClient.ts`, прибрано import Orders).
+- Orders: `src/orders/OrderService.ts`, `src/orders/index.ts` (новий), `src/orders/internal/orderStore.ts` (перейменовано з `orderMutations.ts`).
+- Inventory: `src/inventory/index.ts`, `src/inventory/internal/stockStore.ts` (нові); `src/inventory/StockRepository.ts` видалено.
+- Checkout: `src/checkout/CheckoutController.ts`.
+- Shared: `src/shared/calculateTotal.ts`.
+- Reports / Notifications: три `mapPaymentStatus.ts` видалено; додано `src/reports/paymentReport.ts`, `src/notifications/paymentNotification.ts`, які приймають лише `PaymentStatus`.
+- `src/demo.ts` — наповнення складу через `Inventory.restock`.
+- Тести: нові `tests/paymentStatus.test.ts`, `tests/inventory.test.ts`, `tests/calculateTotal.test.ts`, `tests/orders.test.ts`, `tests/checkout.contract.test.ts`, `tests/consumers.test.ts`. `tests/checkout.functional.test.ts` **не змінено**.
+- Не змінено: `src/database.ts`, `src/config.ts`, публічні типи `CheckoutRequest` і форма відповіді Checkout.
 
 **Difference from prediction and explanation:**
 
-_Буде заповнено після реалізації._
+1. **Reports і Notifications не зникли, а стали consumers.** Прогноз казав лише «видалити дублікати». Порожні модулі не показували б, що межа працює, тому кожен отримав маленьку функцію над нормалізованим `PaymentStatus` — вона не знає жодного provider-специфічного імені.
+2. **Orders змінився більше, ніж прогнозувалось:** крім переходу на контракт Payments, з'явився `orders/index.ts` як public API, а `orderMutations.ts` став єдиним writer статусу замовлення (раніше статус писали і Orders, і Payments).
+3. **`src/demo.ts` не було в прогнозі:** він сам писав у `database.stock`; composition root теж має проходити через Inventory.
+4. **`database.ts` не змінено, як і прогнозувалось,** але доступ до `database.stock` тепер є лише в `inventory/internal/stockStore.ts`. Стартові тести далі пишуть у `database.stock` напряму — це fixture-код, і його навмисно не змінювали, щоб довести збереження поведінки.
+5. **`CheckoutController` отримав другий constructor-параметр `pricing`** — непрогнозована зміна, яка є ціною чистого `calculateTotal` (Decision 6). Публічний метод `checkout()` і відповідь не змінилися.
+
+### Після рівня 90 (другий provider)
+
+_Буде заповнено після реалізації другого provider._

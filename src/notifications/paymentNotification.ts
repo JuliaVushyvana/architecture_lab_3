@@ -1,4 +1,4 @@
-import type { PaymentStatus } from "../payments/paymentStatus.ts";
+import type { PaymentStatus } from "../payments/index.ts";
 
 const MESSAGES: Record<PaymentStatus, string> = {
   paid: "payment received",
