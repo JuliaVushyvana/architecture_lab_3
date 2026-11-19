@@ -1,8 +1,6 @@
 # Architecture review
 
-> Review виконано **до** рефакторингу. Номери рядків відповідають стартовому коду (commit `8a52a13`).
-
-| # | Principle | Evidence (file:line) | Practical risk | Fix |
+| № | Principle | Evidence (file:line) | Practical risk | Fix |
 |---|---|---|---|---|
 | 1 | Information hiding | `src/checkout/CheckoutController.ts:3`, `src/checkout/CheckoutController.ts:23-28` | Checkout (transport-рівень) знає форму `StripePayload`, те, що Stripe рахує суму в мінорних одиницях (`Math.round(total * 100)`), і поле `metadata.orderId`. Другий provider з іншим payload змусить міняти Checkout, хоча його публічний API не змінюється. Помилка в конвертації суми з'явиться в модулі, який взагалі не відповідає за оплату. | Payments отримує provider-neutral запит (`orderId`, `paymentToken`, `amount`, `currency`); payload будує adapter усередині Payments. |
 | 2 | Low coupling / Explicit contracts | `src/orders/OrderService.ts:3-4`, `src/orders/OrderService.ts:10`, `src/orders/OrderService.ts:14`, `src/orders/OrderService.ts:29` | Orders імпортує `StripeClient` з `payments/internal`, створює його сам і приймає `StripePayload` як параметр `placeOrder`. Заміна або додавання provider змінює конструктор і сигнатуру Orders; unit test Orders неможливий без Stripe-специфічних даних. Контракту Payments не існує — є лише деталь реалізації. | Публічний `payments/index.ts` з інтерфейсом `PaymentGateway.authorize()`; Orders отримує його через constructor injection. |

@@ -1,8 +1,4 @@
 # ADR-001: Payments boundary
-
-- **Status:** Accepted (2026-11-19)
-- **Deciders:** автор(и) роботи, див. README
-
 ## Context
 
 До рефакторингу знання про Stripe було розподілене між Checkout (`StripePayload`), Orders (`StripeClient`), Reports і Notifications (три копії mapping), а Payments сам записував статус замовлення через `orders/internal` — тобто між Orders і Payments був цикл. Change request вимагає другого provider і статусу `processing` без зміни Checkout API. Отже, треба явно вирішити, **де проходить межа Payments і якою вона буде**: модуль в одному процесі чи окремий service.

@@ -1,7 +1,5 @@
 # Decision log
 
-Обсяг одного рішення: 80–120 слів (перевіряється скриптом `wc -w` по кожній секції).
-
 ## Decision 1: Єдина нормалізація payment status у Payments
 
 **Problem:** правило «Stripe state → статус системи» скопійоване в Orders, Reports і Notifications; кожна копія залежить від `StripeResponse`.
